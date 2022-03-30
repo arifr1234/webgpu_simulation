@@ -2,9 +2,11 @@
   "name": "webgpu_test",
   "version": "1.0.0",
   "description": "webgpu test",
-  "main": "index.js",
   "author": "Ari",
   "license": "ISC",
+  "scripts": {
+    "dev": "next dev"
+  },
   "dependencies": {
     "next": "^12.1.2",
     "react": "^18.0.0",
