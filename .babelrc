@@ -1,16 +1,10 @@
 {
-    "presets": [
-        [
-            "next/babel",
-            {
-                "babel-plugin-inline-import": {
-                    "extensions": [
-                        ".wgsl"
-                    ]
-                }
-            }
-        ]
+    "plugins": [
+        ["babel-plugin-inline-import", {
+            "extensions": [
+                ".wgsl"
+            ]
+        }]
     ],
-    "plugins": []
+    "presets": ["next/babel"]
 }
-  
