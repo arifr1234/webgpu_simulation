@@ -11,5 +11,9 @@
     "next": "^12.1.2",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "babel-inline-import-loader": "^1.0.1",
+    "babel-plugin-inline-import": "^3.0.0"
   }
 }
