@@ -79,10 +79,10 @@ export default class WebGPUTest extends React.Component{
         passEncoder.end();
 
         this.device.queue.submit([commandEncoder.finish()]);
-        requestAnimationFrame(frame);
+        requestAnimationFrame(frame.bind(this));
       }
 
-      requestAnimationFrame(frame);
+      requestAnimationFrame(frame.bind(this));
     });
   }
 
