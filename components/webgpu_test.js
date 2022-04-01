@@ -16,72 +16,14 @@ export default class WebGPUTest extends React.Component{
   componentDidMount(){
     this.load_web_gpu()
     .then(() => {
-      const context = this.canvas_ref.current.getContext('webgpu');
+      this.context = this.canvas_ref.current.getContext('webgpu');
+      this.presentationFormat = this.context.getPreferredFormat(this.adapter);
 
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      const presentationSize = [
-        this.canvas_ref.current.clientWidth * devicePixelRatio,
-        this.canvas_ref.current.clientHeight * devicePixelRatio,
-      ];
-      const presentationFormat = context.getPreferredFormat(this.adapter);
+      this.configure_context();
 
-      context.configure({
-        device: this.device,
-        format: presentationFormat,
-        size: presentationSize,
-      });
+      this.pipeline = this.create_render_pipeline();
 
-      const pipeline = this.device.createRenderPipeline({
-        vertex: {
-          module: this.device.createShaderModule({
-            code: triangleVertWGSL,
-          }),
-          entryPoint: 'main',
-        },
-        fragment: {
-          module: this.device.createShaderModule({
-            code: redFragWGSL,
-          }),
-          entryPoint: 'main',
-          targets: [
-            {
-              format: presentationFormat,
-            },
-          ],
-        },
-        primitive: {
-          topology: 'triangle-list',
-        },
-      });
-
-      function frame() {
-        // Sample is no longer the active page.
-        if (!this.canvas_ref.current) return;
-
-        const commandEncoder = this.device.createCommandEncoder();
-        const textureView = context.getCurrentTexture().createView();
-
-        const renderPassDescriptor = {
-          colorAttachments: [
-            {
-              view: textureView,
-              clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
-              loadOp: 'clear',
-              storeOp: 'store',
-            },
-          ],
-        };
-
-        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        passEncoder.setPipeline(pipeline);
-        passEncoder.draw(3, 1, 0, 0);
-        passEncoder.end();
-
-        this.device.queue.submit([commandEncoder.finish()]);
-        requestAnimationFrame(frame.bind(this));
-      }
-
-      requestAnimationFrame(frame.bind(this));
+      requestAnimationFrame(this.frame.bind(this));
     });
   }
 
@@ -99,5 +41,71 @@ export default class WebGPUTest extends React.Component{
       if (!device) throw Error("Couldn’t request WebGPU logical device.");
       this.device = device
     });
+  }
+
+  configure_context(){
+    const devicePixelRatio = window.devicePixelRatio || 1;
+    const presentationSize = [
+      this.canvas_ref.current.clientWidth * devicePixelRatio,
+      this.canvas_ref.current.clientHeight * devicePixelRatio,
+    ];
+
+    this.context.configure({
+      device: this.device,
+      format: this.presentationFormat,
+      size: presentationSize,
+    });
+  }
+
+  create_render_pipeline(){
+    return this.device.createRenderPipeline({
+      vertex: {
+        module: this.device.createShaderModule({
+          code: triangleVertWGSL,
+        }),
+        entryPoint: 'main',
+      },
+      fragment: {
+        module: this.device.createShaderModule({
+          code: redFragWGSL,
+        }),
+        entryPoint: 'main',
+        targets: [
+          {
+            format: this.presentationFormat,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+  }
+
+  frame() {
+    // Sample is no longer the active page.
+    if (!this.canvas_ref.current) return;
+
+    const commandEncoder = this.device.createCommandEncoder();
+    const textureView = this.context.getCurrentTexture().createView();
+
+    const renderPassDescriptor = {
+      colorAttachments: [
+        {
+          view: textureView,
+          clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1.0 },
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+    };
+
+    const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+    passEncoder.setPipeline(this.pipeline);
+    passEncoder.draw(3, 1, 0, 0);
+    passEncoder.end();
+
+    this.device.queue.submit([commandEncoder.finish()]);
+    requestAnimationFrame(this.frame.bind(this));
   }
 }
