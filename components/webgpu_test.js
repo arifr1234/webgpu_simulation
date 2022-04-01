@@ -2,7 +2,6 @@ import React from 'react'
 import triangleVertWGSL from '../shaders/triangle.vert.wgsl';
 import redFragWGSL from '../shaders/red.frag.wgsl';
 
-
 export default class WebGPUTest extends React.Component{
   constructor(props) {
     super(props);
