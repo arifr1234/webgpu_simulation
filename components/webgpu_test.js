@@ -21,7 +21,7 @@ export default class WebGPUTest extends React.Component{
 
       this.configure_context();
 
-      this.pipeline = this.create_render_pipeline();
+      this.render_pipeline = this.create_render_pipeline();
 
       requestAnimationFrame(this.frame.bind(this));
     });
@@ -101,7 +101,7 @@ export default class WebGPUTest extends React.Component{
     };
 
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-    passEncoder.setPipeline(this.pipeline);
+    passEncoder.setPipeline(this.render_pipeline);
     passEncoder.draw(3, 1, 0, 0);
     passEncoder.end();
 
