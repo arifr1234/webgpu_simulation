@@ -10,7 +10,7 @@ export default class WebGPUTest extends React.Component{
   }
 
   render(){
-    return <canvas ref={this.canvas_ref}></canvas>
+    return <canvas ref={this.canvas_ref} style={{width: "100%", height: "100%"}}></canvas>
   }
 
   componentDidMount(){
