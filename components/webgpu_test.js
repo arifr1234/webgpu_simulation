@@ -32,13 +32,13 @@ export default class WebGPUTest extends React.Component{
   
     return navigator.gpu.requestAdapter()
     .then((adapter) => {
-      if (!adapter) throw Error("Couldn’t request WebGPU adapter.");
+      if (!adapter) throw Error("Couldn't request WebGPU adapter.");
       this.adapter = adapter
       return adapter
     })
     .then((adapter) => adapter.requestDevice())
     .then((device) => {
-      if (!device) throw Error("Couldn’t request WebGPU logical device.");
+      if (!device) throw Error("Couldn't request WebGPU logical device.");
       this.device = device
     });
   }
@@ -83,9 +83,6 @@ export default class WebGPUTest extends React.Component{
   }
 
   frame() {
-    // Sample is no longer the active page.
-    if (!this.canvas_ref.current) return;
-
     const commandEncoder = this.device.createCommandEncoder();
     const textureView = this.context.getCurrentTexture().createView();
 
