@@ -23,16 +23,6 @@ export default class WebGPUTest extends React.Component{
 
       this.render_pipeline = this.create_render_pipeline();
 
-      const indexBufferData = new Uint16Array([0, 1, 2, 1, 2, 3]);
-    
-      this.indexBuffer = this.device.createBuffer({
-        size: indexBufferData.byteLength,
-        usage: GPUBufferUsage.INDEX,
-        mappedAtCreation: true,
-      });
-      new Uint16Array(this.indexBuffer.getMappedRange()).set(indexBufferData);
-      this.indexBuffer.unmap();
-
       requestAnimationFrame(this.frame.bind(this));
     });
   }
@@ -87,7 +77,7 @@ export default class WebGPUTest extends React.Component{
         ],
       },
       primitive: {
-        topology: 'triangle-list',
+        topology: 'triangle-strip',
       },
     });
   }
@@ -109,9 +99,7 @@ export default class WebGPUTest extends React.Component{
 
     const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     passEncoder.setPipeline(this.render_pipeline);
-    passEncoder.setIndexBuffer(this.indexBuffer, "uint16");
-    passEncoder.drawIndexed(6, 2, 0, 0, 0);
-    // passEncoder.draw(3, 1, 0, 0);
+    passEncoder.draw(4, 2, 0, 0);
     passEncoder.end();
 
     this.device.queue.submit([commandEncoder.finish()]);
