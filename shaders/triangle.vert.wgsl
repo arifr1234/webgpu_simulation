@@ -6,7 +6,7 @@ fn main(@builtin(vertex_index) VertexIndex : u32)
       vec2<f32>(1., 1.),
       vec2<f32>(-1., -1.),
       vec2<f32>(1., -1.),
-      );
+  );
 
   return vec4<f32>(pos[VertexIndex], 0.0, 1.0);
 }
