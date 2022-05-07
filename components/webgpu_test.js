@@ -21,18 +21,18 @@ export default class WebGPUTest extends React.Component{
       this.presentationFormat = this.context.getPreferredFormat(this.adapter);
 
       this.configure_context();
-
       this.pixel_num = this.presentationSize[0] * this.presentationSize[1];
 
+      this.bind_group_layout = this.create_bind_group_layout();
+
+      this.uniform_buffer = this.create_uniform_buffer();
+
       this.ping_pong_buffers = this.create_ping_pong_buffers();
+      this.ping_pong_bind_groups = this.create_ping_pong_bind_groups();
 
       this.compute_pipeline = this.create_compute_pipeline();
-      this.compute_ping_pong_bind_groups = this.create_compute_ping_pong_bind_groups();
 
       this.render_pipeline = this.create_render_pipeline();
-      this.render_ping_pong_bind_groups = this.create_render_ping_pong_bind_groups();
-      this.uniform_buffer = this.create_uniform_buffer();
-      this.uniform_bind_group = this.create_uniform_bind_group();
 
       requestAnimationFrame(this.frame.bind(this));
     });
@@ -65,11 +65,35 @@ export default class WebGPUTest extends React.Component{
       device: this.device,
       format: this.presentationFormat,
       size: this.presentationSize,
+      compositingAlphaMode: "opaque",  // Note: No alpha
+    });
+  }
+
+  create_bind_group_layout() {
+    return this.device.createBindGroupLayout({
+      entries: [{
+          binding: 0,
+          visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT,
+          buffer: { type: "uniform" }
+      }, 
+      {
+          binding: 1,
+          visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT,
+          buffer: { type: "read-only-storage" }
+      }, 
+      {
+          binding: 2,
+          visibility: GPUShaderStage.COMPUTE | GPUShaderStage.FRAGMENT,
+          buffer: { type: "storage" }
+      }]
     });
   }
 
   create_compute_pipeline(){
     return this.device.createComputePipeline({
+      layout: this.device.createPipelineLayout({
+        bindGroupLayouts: [this.bind_group_layout],
+      }),
       compute: {
         module: this.device.createShaderModule({
           code: updateComputeWGSL,
@@ -88,42 +112,43 @@ export default class WebGPUTest extends React.Component{
   create_ping_pong_buffer() {
     return this.create_buffer(
       GPUBufferUsage.STORAGE,
-      new Float32Array(this.buffer_size)
+      new Float32Array(this.pixel_num)
     )
   }
 
-  create_compute_ping_pong_bind_groups() {
+  create_ping_pong_bind_groups() {
     return {
-      in: this.create_ping_pong_bind_group(this.ping_pong_buffers.in, this.ping_pong_buffers.out, this.compute_pipeline.getBindGroupLayout(0)),
-      out: this.create_ping_pong_bind_group(this.ping_pong_buffers.out, this.ping_pong_buffers.in, this.compute_pipeline.getBindGroupLayout(0))
+      in: this.create_ping_pong_bind_group(this.ping_pong_buffers.in, this.ping_pong_buffers.out),
+      out: this.create_ping_pong_bind_group(this.ping_pong_buffers.out, this.ping_pong_buffers.in)
     }
   }
 
-  create_render_ping_pong_bind_groups() {
-    return {
-      in: this.create_ping_pong_bind_group(this.ping_pong_buffers.in, this.ping_pong_buffers.out, this.render_pipeline.getBindGroupLayout(0)),
-      out: this.create_ping_pong_bind_group(this.ping_pong_buffers.out, this.ping_pong_buffers.in, this.render_pipeline.getBindGroupLayout(0))
-    }
-  }
-
-  create_ping_pong_bind_group(in_buffer, out_buffer, layout) {
+  create_ping_pong_bind_group(in_buffer, out_buffer) {
     return this.device.createBindGroup({
-      layout: layout,
+      layout: this.bind_group_layout,
       entries: [
         {
           binding: 0,
           resource: {
-            buffer: in_buffer,
+            buffer: this.uniform_buffer,
             offset: 0,
-            size: this.buffer_size,
+            size: this.uniform_size,
           },
         },
         {
           binding: 1,
           resource: {
+            buffer: in_buffer,
+            offset: 0,
+            size: this.pixel_num,
+          },
+        },
+        {
+          binding: 2,
+          resource: {
             buffer: out_buffer,
             offset: 0,
-            size: this.buffer_size,
+            size: this.pixel_num,
           },
         },
       ],
@@ -144,6 +169,9 @@ export default class WebGPUTest extends React.Component{
 
   create_render_pipeline(){
     return this.device.createRenderPipeline({
+      layout: this.device.createPipelineLayout({
+        bindGroupLayouts: [this.bind_group_layout],
+      }),
       vertex: {
         module: this.device.createShaderModule({
           code: triangleVertWGSL,
@@ -168,24 +196,11 @@ export default class WebGPUTest extends React.Component{
   }
 
   create_uniform_buffer() {
+    this.uniform_size = 2;
     return this.create_buffer(
       GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      new Float32Array(2)
+      new Float32Array(this.uniform_size)
     )
-  }
-
-  create_uniform_bind_group() {
-    return this.device.createBindGroup({
-      layout: this.render_pipeline.getBindGroupLayout(1),
-      entries: [
-        {
-          binding: 0,
-          resource: {
-            buffer: this.uniform_buffer,
-          },
-        }
-      ]
-    }); 
   }
 
   frame() {
@@ -214,22 +229,20 @@ export default class WebGPUTest extends React.Component{
 
     const compute_pass_encoder = commandEncoder.beginComputePass();
     compute_pass_encoder.setPipeline(this.compute_pipeline);
-    compute_pass_encoder.setBindGroup(0, this.compute_ping_pong_bind_groups.in);
-    compute_pass_encoder.dispatch(Math.ceil(this.pixel_num / 64));
+    compute_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
+    compute_pass_encoder.dispatchWorkgroups(Math.ceil(this.pixel_num / 64));
     compute_pass_encoder.end();
 
     const render_pass_encoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     render_pass_encoder.setPipeline(this.render_pipeline);
-    render_pass_encoder.setBindGroup(0, this.render_ping_pong_bind_groups.in);
-    render_pass_encoder.setBindGroup(1, this.uniform_bind_group);
+    render_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
     render_pass_encoder.draw(4, 2, 0, 0);
     render_pass_encoder.end();
 
     this.device.queue.submit([commandEncoder.finish()]);
     requestAnimationFrame(this.frame.bind(this));
 
-    [this.compute_ping_pong_bind_groups.in, this.compute_ping_pong_bind_groups.out] = [this.compute_ping_pong_bind_groups.out, this.compute_ping_pong_bind_groups.in];
-    [this.render_ping_pong_bind_groups.in, this.render_ping_pong_bind_groups.out] = [this.render_ping_pong_bind_groups.out, this.render_ping_pong_bind_groups.in];
+    [this.ping_pong_bind_groups.in, this.ping_pong_bind_groups.out] = [this.ping_pong_bind_groups.out, this.ping_pong_bind_groups.in];
     [this.ping_pong_buffers.in, this.ping_pong_buffers.out] = [this.ping_pong_buffers.out, this.ping_pong_buffers.in];
   }
 }
