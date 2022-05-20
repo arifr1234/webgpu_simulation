@@ -21,14 +21,14 @@ export default class WebGPUTest extends React.Component{
       this.presentationFormat = this.context.getPreferredFormat(this.adapter);
 
       this.configure_context();
-      this.pixel_num = this.presentationSize[0] * this.presentationSize[1];
+      this.pixel_num = Math.floor(this.presentationSize[0] * this.presentationSize[1]);
 
       this.bind_group_layout = this.create_bind_group_layout();
 
       this.uniform_buffer = this.create_uniform_buffer();
 
       this.ping_pong_buffers = this.create_ping_pong_buffers();
-      this.ping_pong_bind_groups = this.create_ping_pong_bind_groups();
+      this.ping_pong_bind_groups = this.create_ping_pong_bind_groups(this.bind_group_layout);
 
       this.compute_pipeline = this.create_compute_pipeline();
 
@@ -116,16 +116,16 @@ export default class WebGPUTest extends React.Component{
     )
   }
 
-  create_ping_pong_bind_groups() {
+  create_ping_pong_bind_groups(layout) {
     return {
-      in: this.create_ping_pong_bind_group(this.ping_pong_buffers.in, this.ping_pong_buffers.out),
-      out: this.create_ping_pong_bind_group(this.ping_pong_buffers.out, this.ping_pong_buffers.in)
+      in: this.create_ping_pong_bind_group(this.ping_pong_buffers.in, this.ping_pong_buffers.out, layout),
+      out: this.create_ping_pong_bind_group(this.ping_pong_buffers.out, this.ping_pong_buffers.in, layout)
     }
   }
 
-  create_ping_pong_bind_group(in_buffer, out_buffer) {
+  create_ping_pong_bind_group(in_buffer, out_buffer, layout) {
     return this.device.createBindGroup({
-      layout: this.bind_group_layout,
+      layout: layout,
       entries: [
         {
           binding: 0,
@@ -227,11 +227,11 @@ export default class WebGPUTest extends React.Component{
       ],
     };
 
-    const compute_pass_encoder = commandEncoder.beginComputePass();
-    compute_pass_encoder.setPipeline(this.compute_pipeline);
-    compute_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
-    compute_pass_encoder.dispatchWorkgroups(Math.ceil(this.pixel_num / 64));
-    compute_pass_encoder.end();
+    // const compute_pass_encoder = commandEncoder.beginComputePass();
+    // compute_pass_encoder.setPipeline(this.compute_pipeline);
+    // compute_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
+    // compute_pass_encoder.dispatchWorkgroups(Math.ceil(this.pixel_num / 64));
+    // compute_pass_encoder.end();
 
     const render_pass_encoder = commandEncoder.beginRenderPass(renderPassDescriptor);
     render_pass_encoder.setPipeline(this.render_pipeline);
@@ -240,9 +240,10 @@ export default class WebGPUTest extends React.Component{
     render_pass_encoder.end();
 
     this.device.queue.submit([commandEncoder.finish()]);
-    requestAnimationFrame(this.frame.bind(this));
 
     [this.ping_pong_bind_groups.in, this.ping_pong_bind_groups.out] = [this.ping_pong_bind_groups.out, this.ping_pong_bind_groups.in];
     [this.ping_pong_buffers.in, this.ping_pong_buffers.out] = [this.ping_pong_buffers.out, this.ping_pong_buffers.in];
+
+    // requestAnimationFrame(this.frame.bind(this));
   }
 }
