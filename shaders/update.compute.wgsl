@@ -10,5 +10,5 @@ struct Uniforms {
 fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     var index : u32 = GlobalInvocationID.x;
 
-    out_buffer[index] = 1. - in_buffer[index];
+    out_buffer[index] =  1. - in_buffer[index];
 }

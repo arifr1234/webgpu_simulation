@@ -18,7 +18,7 @@ export default class WebGPUTest extends React.Component{
     this.load_web_gpu()
     .then(() => {
       this.context = this.canvas_ref.current.getContext('webgpu');
-      this.presentationFormat = this.context.getPreferredFormat(this.adapter);
+      this.presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
       this.configure_context();
       this.pixel_num = Math.floor(this.presentationSize[0] * this.presentationSize[1]);
@@ -30,9 +30,9 @@ export default class WebGPUTest extends React.Component{
       this.ping_pong_buffers = this.create_ping_pong_buffers();
       this.ping_pong_bind_groups = this.create_ping_pong_bind_groups(this.bind_group_layout);
 
-      this.compute_pipeline = this.create_compute_pipeline();
+      this.compute_pipeline = this.create_compute_pipeline(this.bind_group_layout);
 
-      this.render_pipeline = this.create_render_pipeline();
+      this.render_pipeline = this.create_render_pipeline(this.bind_group_layout);
 
       requestAnimationFrame(this.frame.bind(this));
     });
@@ -55,16 +55,17 @@ export default class WebGPUTest extends React.Component{
   }
 
   configure_context(){
-    const devicePixelRatio = window.devicePixelRatio || 1;
+    const devicePixelRatio = 1;  // window.devicePixelRatio || 1;
+    console.log(devicePixelRatio);
     this.presentationSize = [
       this.canvas_ref.current.clientWidth * devicePixelRatio,
       this.canvas_ref.current.clientHeight * devicePixelRatio,
     ];
+    console.log(this.presentationSize);
 
     this.context.configure({
       device: this.device,
       format: this.presentationFormat,
-      size: this.presentationSize,
       compositingAlphaMode: "opaque",  // Note: No alpha
     });
   }
@@ -89,10 +90,10 @@ export default class WebGPUTest extends React.Component{
     });
   }
 
-  create_compute_pipeline(){
+  create_compute_pipeline(bind_group_layout){
     return this.device.createComputePipeline({
       layout: this.device.createPipelineLayout({
-        bindGroupLayouts: [this.bind_group_layout],
+        bindGroupLayouts: [bind_group_layout],
       }),
       compute: {
         module: this.device.createShaderModule({
@@ -132,7 +133,7 @@ export default class WebGPUTest extends React.Component{
           resource: {
             buffer: this.uniform_buffer,
             offset: 0,
-            size: this.uniform_size,
+            size: this.uniform_size * 4,
           },
         },
         {
@@ -140,7 +141,7 @@ export default class WebGPUTest extends React.Component{
           resource: {
             buffer: in_buffer,
             offset: 0,
-            size: this.pixel_num,
+            size: this.pixel_num * 4,
           },
         },
         {
@@ -148,7 +149,7 @@ export default class WebGPUTest extends React.Component{
           resource: {
             buffer: out_buffer,
             offset: 0,
-            size: this.pixel_num,
+            size: this.pixel_num * 4,
           },
         },
       ],
@@ -167,10 +168,10 @@ export default class WebGPUTest extends React.Component{
     return buffer;
   }
 
-  create_render_pipeline(){
+  create_render_pipeline(bind_group_layout){
     return this.device.createRenderPipeline({
       layout: this.device.createPipelineLayout({
-        bindGroupLayouts: [this.bind_group_layout],
+        bindGroupLayouts: [bind_group_layout],
       }),
       vertex: {
         module: this.device.createShaderModule({
@@ -204,8 +205,6 @@ export default class WebGPUTest extends React.Component{
   }
 
   frame() {
-    const commandEncoder = this.device.createCommandEncoder();
-
     const uniform_data = new Float32Array(this.presentationSize);
     this.device.queue.writeBuffer(
       this.uniform_buffer,
@@ -227,23 +226,29 @@ export default class WebGPUTest extends React.Component{
       ],
     };
 
-    // const compute_pass_encoder = commandEncoder.beginComputePass();
-    // compute_pass_encoder.setPipeline(this.compute_pipeline);
-    // compute_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
-    // compute_pass_encoder.dispatchWorkgroups(Math.ceil(this.pixel_num / 64));
-    // compute_pass_encoder.end();
+    const compute_command_encoder = this.device.createCommandEncoder();
 
-    const render_pass_encoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+    const compute_pass_encoder = compute_command_encoder.beginComputePass();
+    compute_pass_encoder.setPipeline(this.compute_pipeline);
+    compute_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
+    compute_pass_encoder.dispatchWorkgroups(Math.ceil(this.pixel_num / 64));
+    compute_pass_encoder.end();
+
+    this.device.queue.submit([compute_command_encoder.finish()]);
+
+    const render_command_encoder = this.device.createCommandEncoder();
+
+    const render_pass_encoder = render_command_encoder.beginRenderPass(renderPassDescriptor);
     render_pass_encoder.setPipeline(this.render_pipeline);
     render_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
     render_pass_encoder.draw(4, 2, 0, 0);
     render_pass_encoder.end();
 
-    this.device.queue.submit([commandEncoder.finish()]);
+    this.device.queue.submit([render_command_encoder.finish()]);
 
     [this.ping_pong_bind_groups.in, this.ping_pong_bind_groups.out] = [this.ping_pong_bind_groups.out, this.ping_pong_bind_groups.in];
     [this.ping_pong_buffers.in, this.ping_pong_buffers.out] = [this.ping_pong_buffers.out, this.ping_pong_buffers.in];
 
-    // requestAnimationFrame(this.frame.bind(this));
+    requestAnimationFrame(this.frame.bind(this));
   }
 }
