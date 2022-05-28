@@ -1,5 +1,5 @@
 struct Uniforms {
-  resolution : vec2<f32>,
+  resolution : vec2<u32>,
 };
 
 @binding(0) @group(0) var<uniform> uniforms : Uniforms;
@@ -10,5 +10,8 @@ struct Uniforms {
 fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     var index : u32 = GlobalInvocationID.x;
 
-    out_buffer[index] =  1. - in_buffer[index];
+    var x : u32 = index % uniforms.resolution.x;
+    var y : u32 = index / uniforms.resolution.x;
+
+    out_buffer[index] = f32(x) / f32(uniforms.resolution.x);
 }

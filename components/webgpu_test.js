@@ -200,12 +200,12 @@ export default class WebGPUTest extends React.Component{
     this.uniform_size = 2;
     return this.create_buffer(
       GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      new Float32Array(this.uniform_size)
+      new Int32Array(this.uniform_size)
     )
   }
 
   frame() {
-    const uniform_data = new Float32Array(this.presentationSize);
+    const uniform_data = new Int32Array(this.presentationSize);
     this.device.queue.writeBuffer(
       this.uniform_buffer,
       0,
@@ -226,16 +226,6 @@ export default class WebGPUTest extends React.Component{
       ],
     };
 
-    const compute_command_encoder = this.device.createCommandEncoder();
-
-    const compute_pass_encoder = compute_command_encoder.beginComputePass();
-    compute_pass_encoder.setPipeline(this.compute_pipeline);
-    compute_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
-    compute_pass_encoder.dispatchWorkgroups(Math.ceil(this.pixel_num / 64));
-    compute_pass_encoder.end();
-
-    this.device.queue.submit([compute_command_encoder.finish()]);
-
     const render_command_encoder = this.device.createCommandEncoder();
 
     const render_pass_encoder = render_command_encoder.beginRenderPass(renderPassDescriptor);
@@ -245,6 +235,17 @@ export default class WebGPUTest extends React.Component{
     render_pass_encoder.end();
 
     this.device.queue.submit([render_command_encoder.finish()]);
+    
+
+    const compute_command_encoder = this.device.createCommandEncoder();
+
+    const compute_pass_encoder = compute_command_encoder.beginComputePass();
+    compute_pass_encoder.setPipeline(this.compute_pipeline);
+    compute_pass_encoder.setBindGroup(0, this.ping_pong_bind_groups.in);
+    compute_pass_encoder.dispatchWorkgroups(Math.ceil(this.pixel_num / 64));
+    compute_pass_encoder.end();
+
+    this.device.queue.submit([compute_command_encoder.finish()]);
 
     [this.ping_pong_bind_groups.in, this.ping_pong_bind_groups.out] = [this.ping_pong_bind_groups.out, this.ping_pong_bind_groups.in];
     [this.ping_pong_buffers.in, this.ping_pong_buffers.out] = [this.ping_pong_buffers.out, this.ping_pong_buffers.in];
