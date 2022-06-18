@@ -4,7 +4,9 @@ export default function HomePage() {
   return (
     <div>
       <h1>👷‍♂️</h1>
-      <WebGPUTest></WebGPUTest>
+      <WebGPUTest width="200px" height="200px"></WebGPUTest>
+      <WebGPUTest width="200px" height="100px"></WebGPUTest>
+      <WebGPUTest width="200px" height="50px"></WebGPUTest>
     </div>
   )
 }

@@ -9,10 +9,12 @@ export default class WebGPUTest extends React.Component{
     super(props);
 
     this.canvas_ref = React.createRef();
+    this.width = props.width;
+    this.height = props.height;
   }
 
   render(){
-    return <canvas ref={this.canvas_ref} style={{width: "500px", height: "300px"}}></canvas>
+    return <canvas ref={this.canvas_ref} style={{width: this.width, height: this.height}}></canvas>
   }
 
   componentDidMount(){
@@ -22,7 +24,7 @@ export default class WebGPUTest extends React.Component{
       this.presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
       this.configure_context();
-      this.pixel_num = Math.floor(this.presentationSize[0] * this.presentationSize[1]);
+      this.pixel_num = Math.floor(this.presentationSize[0] * (this.presentationSize[1] + 70)) + 1;
       this.cell_byte_size = (
         3 * 4  // color
       );
@@ -118,7 +120,7 @@ export default class WebGPUTest extends React.Component{
   create_ping_pong_buffer() {
     return this.create_buffer(
       GPUBufferUsage.STORAGE,
-      new Float32Array(this.pixel_num)
+      new Float32Array(this.ping_pong_buffer_size)
     )
   }
 
@@ -146,7 +148,7 @@ export default class WebGPUTest extends React.Component{
           resource: {
             buffer: in_buffer,
             offset: 0,
-            size: this.pixel_num * 4,
+            size: this.ping_pong_buffer_size,
           },
         },
         {
@@ -154,7 +156,7 @@ export default class WebGPUTest extends React.Component{
           resource: {
             buffer: out_buffer,
             offset: 0,
-            size: this.pixel_num * 4,
+            size: this.ping_pong_buffer_size,
           },
         },
       ],
