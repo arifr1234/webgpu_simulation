@@ -1,7 +1,3 @@
-struct Uniforms {
-  resolution : vec2<u32>,
-};
-
 @binding(0) @group(0) var<uniform> uniforms : Uniforms;
 @binding(1) @group(0) var<storage, read> in_buffer : array<f32>;
 @binding(2) @group(0) var<storage, read_write> out_buffer : array<f32>;

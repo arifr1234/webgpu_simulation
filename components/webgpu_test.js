@@ -2,6 +2,7 @@ import React from 'react'
 import triangleVertWGSL from '../shaders/triangle.vert.wgsl';
 import fragWGSL from '../shaders/frag_shader.frag.wgsl';
 import updateComputeWGSL from '../shaders/update.compute.wgsl';
+import commonWGSL from '../shaders/common.wgsl';
 
 export default class WebGPUTest extends React.Component{
   constructor(props) {
@@ -11,7 +12,7 @@ export default class WebGPUTest extends React.Component{
   }
 
   render(){
-    return <canvas ref={this.canvas_ref} style={{width: "100%", height: "100%"}}></canvas>
+    return <canvas ref={this.canvas_ref} style={{width: "500px", height: "300px"}}></canvas>
   }
 
   componentDidMount(){
@@ -22,6 +23,10 @@ export default class WebGPUTest extends React.Component{
 
       this.configure_context();
       this.pixel_num = Math.floor(this.presentationSize[0] * this.presentationSize[1]);
+      this.cell_byte_size = (
+        3 * 4  // color
+      );
+      this.ping_pong_buffer_size = this.pixel_num * this.cell_byte_size;
 
       this.bind_group_layout = this.create_bind_group_layout();
 
@@ -55,7 +60,7 @@ export default class WebGPUTest extends React.Component{
   }
 
   configure_context(){
-    const devicePixelRatio = 1;  // window.devicePixelRatio || 1;
+    const devicePixelRatio = window.devicePixelRatio || 1;
     console.log(devicePixelRatio);
     this.presentationSize = [
       this.canvas_ref.current.clientWidth * devicePixelRatio,
@@ -66,7 +71,7 @@ export default class WebGPUTest extends React.Component{
     this.context.configure({
       device: this.device,
       format: this.presentationFormat,
-      compositingAlphaMode: "opaque",  // Note: No alpha
+      alphaMode: "opaque",  // Note: No alpha
     });
   }
 
@@ -97,7 +102,7 @@ export default class WebGPUTest extends React.Component{
       }),
       compute: {
         module: this.device.createShaderModule({
-          code: updateComputeWGSL,
+          code: commonWGSL + updateComputeWGSL,
         }),
         entryPoint: 'main',
       },
@@ -133,7 +138,7 @@ export default class WebGPUTest extends React.Component{
           resource: {
             buffer: this.uniform_buffer,
             offset: 0,
-            size: this.uniform_size * 4,
+            size: this.uniform_size,
           },
         },
         {
@@ -181,7 +186,7 @@ export default class WebGPUTest extends React.Component{
       },
       fragment: {
         module: this.device.createShaderModule({
-          code: fragWGSL,
+          code: commonWGSL + fragWGSL,
         }),
         entryPoint: 'main',
         targets: [
@@ -197,10 +202,12 @@ export default class WebGPUTest extends React.Component{
   }
 
   create_uniform_buffer() {
-    this.uniform_size = 2;
+    this.uniform_size = (
+      2 * 4  // resolution
+    );
     return this.create_buffer(
       GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      new Int32Array(this.uniform_size)
+      new ArrayBuffer(this.uniform_size)
     )
   }
 
