@@ -9,5 +9,5 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     var x : u32 = index % uniforms.resolution.x;
     var y : u32 = index / uniforms.resolution.x;
 
-    out_buffer[index] = Cell(vec3<f32>(1, 0, 0));// f32(x) / f32(uniforms.resolution.x);
+    out_buffer[index] = Cell(vec3<f32>(f32(x) / f32(uniforms.resolution.x), 1. - f32(y) / f32(uniforms.resolution.y), 1.));
 }

@@ -14,7 +14,7 @@ export default class WebGPUTest extends React.Component{
   }
 
   render(){
-    return <canvas ref={this.canvas_ref} style={{width: this.width, height: this.height}}></canvas>
+    return <canvas ref={this.canvas_ref} width={this.width} height={this.height}></canvas>
   }
 
   componentDidMount(){
@@ -24,9 +24,9 @@ export default class WebGPUTest extends React.Component{
       this.presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
       this.configure_context();
-      this.pixel_num = Math.floor(this.presentationSize[0] * (this.presentationSize[1] + 70)) + 1;
+      this.pixel_num = Math.floor(this.clientSize[0] * this.clientSize[1]) + 1;
       this.cell_byte_size = (
-        3 * 4  // color
+        (3 + 1) * 4  // color
       );
       this.ping_pong_buffer_size = this.pixel_num * this.cell_byte_size;
 
@@ -62,13 +62,10 @@ export default class WebGPUTest extends React.Component{
   }
 
   configure_context(){
-    const devicePixelRatio = window.devicePixelRatio || 1;
-    console.log(devicePixelRatio);
-    this.presentationSize = [
-      this.canvas_ref.current.clientWidth * devicePixelRatio,
-      this.canvas_ref.current.clientHeight * devicePixelRatio,
+    this.clientSize = [
+      this.canvas_ref.current.clientWidth,
+      this.canvas_ref.current.clientHeight,
     ];
-    console.log(this.presentationSize);
 
     this.context.configure({
       device: this.device,
@@ -214,7 +211,7 @@ export default class WebGPUTest extends React.Component{
   }
 
   frame() {
-    const uniform_data = new Int32Array(this.presentationSize);
+    const uniform_data = new Int32Array(this.clientSize);
     this.device.queue.writeBuffer(
       this.uniform_buffer,
       0,
