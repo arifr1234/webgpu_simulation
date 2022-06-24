@@ -12,7 +12,7 @@ export default function HomePage() {
     <div>
       <style>{css}</style>
       <h1>👷‍♂️</h1>
-      <WebGPUTest width="50" height="5"></WebGPUTest>
+      <WebGPUTest width="5" height="5"></WebGPUTest>
     </div>
   )
 }

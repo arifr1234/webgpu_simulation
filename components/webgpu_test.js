@@ -26,7 +26,7 @@ export default class WebGPUTest extends React.Component{
       this.canvas_ref.current.style = "image-rendering: pixelated;";
 
       this.configure_context();
-      this.pixel_num = Math.floor(this.clientSize[0] * this.clientSize[1]) + 1;
+      this.pixel_num = this.canvas_size[0] * this.canvas_size[1];
       this.cell_byte_size = (
         (3 + 1) * 4  // color
       );
@@ -37,7 +37,7 @@ export default class WebGPUTest extends React.Component{
       this.uniform_buffer = this.create_uniform_buffer();
 
       const initial = new Float32Array(this.ping_pong_buffer_size);
-      initial[0] = 1.;
+      initial[4 * (0)] = 1.;
 
       this.ping_pong_buffers = this.create_ping_pong_buffers(initial);
       this.ping_pong_bind_groups = this.create_ping_pong_bind_groups(this.bind_group_layout);
@@ -67,9 +67,9 @@ export default class WebGPUTest extends React.Component{
   }
 
   configure_context(){
-    this.clientSize = [
-      this.canvas_ref.current.clientWidth,
-      this.canvas_ref.current.clientHeight,
+    this.canvas_size = [
+      this.canvas_ref.current.width,
+      this.canvas_ref.current.height,
     ];
 
     this.context.configure({
@@ -216,7 +216,7 @@ export default class WebGPUTest extends React.Component{
   }
 
   frame() {
-    const uniform_data = new Int32Array(this.clientSize);
+    const uniform_data = new Int32Array(this.canvas_size);
     this.device.queue.writeBuffer(
       this.uniform_buffer,
       0,
@@ -261,6 +261,7 @@ export default class WebGPUTest extends React.Component{
     [this.ping_pong_bind_groups.in, this.ping_pong_bind_groups.out] = [this.ping_pong_bind_groups.out, this.ping_pong_bind_groups.in];
     [this.ping_pong_buffers.in, this.ping_pong_buffers.out] = [this.ping_pong_buffers.out, this.ping_pong_buffers.in];
 
-    requestAnimationFrame(this.frame.bind(this));
+    setTimeout(this.frame.bind(this), 1000);
+    // requestAnimationFrame(this.frame.bind(this));
   }
 }

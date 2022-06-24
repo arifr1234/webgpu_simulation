@@ -14,6 +14,8 @@ fn is_valid_coord(coord : vec2<u32>) -> bool {
 fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     var index : u32 = GlobalInvocationID.x;
 
+    out_buffer[index] = in_buffer[index];
+
     var coord : vec2<u32> = vec2<u32>(index % uniforms.resolution.x, index / uniforms.resolution.x);
 
     // out_buffer[index] = Cell(vec3<f32>(f32(x) / f32(uniforms.resolution.x), f32(y) / f32(uniforms.resolution.y), 1.));
@@ -21,12 +23,12 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     if(in_buffer[index].color.x > 0.5)
     {
         var new_coord : vec2<u32> = coord + vec2<u32>(1, 0);
-        if(is_valid_coord(new_coord))
+        if(true || is_valid_coord(new_coord))
         {
             out_buffer[calc_index(new_coord)].color.x = 1.;
         }
 
         out_buffer[index].color.x = 0.;
     }
-    
+
 }
