@@ -23,6 +23,8 @@ export default class WebGPUTest extends React.Component{
       this.context = this.canvas_ref.current.getContext('webgpu');
       this.presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
+      this.canvas_ref.current.style = "image-rendering: pixelated;";
+
       this.configure_context();
       this.pixel_num = Math.floor(this.clientSize[0] * this.clientSize[1]) + 1;
       this.cell_byte_size = (
