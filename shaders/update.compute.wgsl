@@ -10,7 +10,7 @@ fn is_valid_coord(coord : vec2<u32>) -> bool {
     return coord.x < uniforms.resolution.x && coord.y < uniforms.resolution.y;
 }
 
-@stage(compute) @workgroup_size(64)
+@compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
     var index : u32 = GlobalInvocationID.x;
 
