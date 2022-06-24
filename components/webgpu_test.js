@@ -34,7 +34,10 @@ export default class WebGPUTest extends React.Component{
 
       this.uniform_buffer = this.create_uniform_buffer();
 
-      this.ping_pong_buffers = this.create_ping_pong_buffers();
+      const initial = new Float32Array(this.ping_pong_buffer_size);
+      initial[0] = 1.;
+
+      this.ping_pong_buffers = this.create_ping_pong_buffers(initial);
       this.ping_pong_bind_groups = this.create_ping_pong_bind_groups(this.bind_group_layout);
 
       this.compute_pipeline = this.create_compute_pipeline(this.bind_group_layout);
@@ -108,16 +111,16 @@ export default class WebGPUTest extends React.Component{
     });
   }
 
-  create_ping_pong_buffers() {
+  create_ping_pong_buffers(initial) {
     return {
-      in: this.create_ping_pong_buffer(),
-      out: this.create_ping_pong_buffer()
+      in: this.create_ping_pong_buffer(initial),
+      out: this.create_ping_pong_buffer(new Float32Array(this.ping_pong_buffer_size))
     }
   }
-  create_ping_pong_buffer() {
+  create_ping_pong_buffer(data) {
     return this.create_buffer(
       GPUBufferUsage.STORAGE,
-      new Float32Array(this.ping_pong_buffer_size)
+      data
     )
   }
 
