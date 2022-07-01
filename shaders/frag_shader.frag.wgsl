@@ -5,5 +5,13 @@
 @fragment
 fn main(@builtin(position) position : vec4<f32>) -> @location(0) vec4<f32> {
   var coord : vec2<u32> = vec2<u32>(position.xy);
-  return vec4<f32>((in_buffer[coord.x + uniforms.resolution.x * coord.y]).color, 1.);
+
+  var this : Cell = in_buffer[calc_index(coord)];
+
+  if(is_active(this))
+  {
+    return vec4<f32>(1., 1., 1., 1.);
+  }
+
+  return vec4<f32>(0., 0., 0., 1.);
 }

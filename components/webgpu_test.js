@@ -25,10 +25,21 @@ export default class WebGPUTest extends React.Component{
 
       this.canvas_ref.current.style = "image-rendering: pixelated;";
 
-      this.configure_context();
+      this.context.configure({
+        device: this.device,
+        format: this.presentationFormat,
+        alphaMode: "opaque",  // Note: No alpha
+      });
+
+      this.canvas_size = [
+        this.canvas_ref.current.width,
+        this.canvas_ref.current.height,
+      ];
+
       this.pixel_num = this.canvas_size[0] * this.canvas_size[1];
       this.cell_byte_size = (
-        (3 + 1) * 4  // color
+        (2) * 4 +  // pos
+        (2) * 4    // vel
       );
       this.ping_pong_buffer_size = this.pixel_num * this.cell_byte_size;
 
@@ -37,7 +48,27 @@ export default class WebGPUTest extends React.Component{
       this.uniform_buffer = this.create_uniform_buffer();
 
       const initial = new DataView(new ArrayBuffer(this.ping_pong_buffer_size));
-      initial.setFloat32(0, 1., true);
+
+      const cells = [];
+
+      for(var i=0; i < 10; i++){
+        cells.push({
+          pos: this.canvas_size.map(x => (1 - Math.random()) * x), 
+          vel: [Math.random(), Math.random()].map(x => (2 * x - 1) / 10)
+        });
+      }
+      
+      cells.forEach((cell, i) => {
+        const set_float32 = (offset, value) => {
+          initial.setFloat32(i * this.cell_byte_size + offset * 4, value, true);
+        };
+        
+        set_float32(0, cell.pos[0]);
+        set_float32(1, cell.pos[1]);
+        set_float32(2, cell.vel[0]);
+        set_float32(3, cell.vel[1]);
+      });
+      
 
       this.ping_pong_buffers = this.create_ping_pong_buffers(initial.buffer);
       this.ping_pong_bind_groups = this.create_ping_pong_bind_groups(this.bind_group_layout);
@@ -63,19 +94,6 @@ export default class WebGPUTest extends React.Component{
     .then((device) => {
       if (!device) throw Error("Couldn't request WebGPU logical device.");
       this.device = device
-    });
-  }
-
-  configure_context(){
-    this.canvas_size = [
-      this.canvas_ref.current.width,
-      this.canvas_ref.current.height,
-    ];
-
-    this.context.configure({
-      device: this.device,
-      format: this.presentationFormat,
-      alphaMode: "opaque",  // Note: No alpha
     });
   }
 
@@ -261,7 +279,7 @@ export default class WebGPUTest extends React.Component{
     [this.ping_pong_bind_groups.in, this.ping_pong_bind_groups.out] = [this.ping_pong_bind_groups.out, this.ping_pong_bind_groups.in];
     [this.ping_pong_buffers.in, this.ping_pong_buffers.out] = [this.ping_pong_buffers.out, this.ping_pong_buffers.in];
 
-    setTimeout(this.frame.bind(this), 1000);
-    // requestAnimationFrame(this.frame.bind(this));
+    // setTimeout(this.frame.bind(this), 1000);
+    requestAnimationFrame(this.frame.bind(this));
   }
 }
