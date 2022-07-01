@@ -225,7 +225,8 @@ export default class WebGPUTest extends React.Component{
 
   create_uniform_buffer() {
     this.uniform_size = (
-      2 * 4  // resolution
+      2 * 4 +  // resolution
+      2 * 4    // f_resolution
     );
     return this.create_buffer(
       GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -236,8 +237,10 @@ export default class WebGPUTest extends React.Component{
   frame() {
     var uniform_data = new DataView(new ArrayBuffer(this.uniform_size));
 
-    uniform_data.setUint32(0, this.canvas_size[0], true);
-    uniform_data.setUint32(4, this.canvas_size[1], true);
+    uniform_data.setUint32 (0 * 4, this.canvas_size[0], true);
+    uniform_data.setUint32 (1 * 4, this.canvas_size[1], true);
+    uniform_data.setFloat32(2 * 4, this.canvas_size[0], true);
+    uniform_data.setFloat32(3 * 4, this.canvas_size[1], true);
     
     this.device.queue.writeBuffer(
       this.uniform_buffer,

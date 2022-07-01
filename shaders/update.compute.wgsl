@@ -4,8 +4,8 @@
 
 var<private> INACTIVE_CELL: Cell = Cell(vec2<f32>(-1., 0.), vec2<f32>(0., 0.));
 
-fn is_valid_coord(coord : vec2<u32>) -> bool {
-    return coord.x < uniforms.resolution.x && coord.y < uniforms.resolution.y;
+fn is_valid_coord(coord : vec2<f32>) -> bool {
+    return 0 <= coord.x && coord.x < uniforms.f_resolution.x && 0 <= coord.y && coord.y < uniforms.f_resolution.y;
 }
 
 @compute @workgroup_size(64)
@@ -19,12 +19,11 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
         var coord : vec2<u32> = vec2<u32>(index % uniforms.resolution.x, index / uniforms.resolution.x);
 
         var new_pos : vec2<f32> = this.pos + this.vel;
-        var new_coord : vec2<u32> = vec2<u32>(new_pos);
 
         out_buffer[index] = INACTIVE_CELL;
-        if(is_valid_coord(new_coord))
+        if(is_valid_coord(new_pos))
         {
-            out_buffer[calc_index(new_coord)] = Cell(new_pos, this.vel);
+            out_buffer[calc_index(vec2<u32>(new_pos))] = Cell(new_pos, this.vel);
         }
     }
     else

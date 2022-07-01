@@ -1,5 +1,6 @@
 struct Uniforms {
   resolution : vec2<u32>,
+  f_resolution : vec2<f32>,
 };
 
 struct Cell {
