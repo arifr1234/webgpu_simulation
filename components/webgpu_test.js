@@ -234,7 +234,11 @@ export default class WebGPUTest extends React.Component{
   }
 
   frame() {
-    const uniform_data = new Int32Array(this.canvas_size);
+    var uniform_data = new DataView(new ArrayBuffer(this.uniform_size));
+
+    uniform_data.setUint32(0, this.canvas_size[0], true);
+    uniform_data.setUint32(4, this.canvas_size[1], true);
+    
     this.device.queue.writeBuffer(
       this.uniform_buffer,
       0,
