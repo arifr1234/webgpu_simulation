@@ -141,7 +141,7 @@ export default class WebGPUTest extends React.Component{
   }
   create_ping_pong_buffer(data) {
     return this.create_buffer(
-      GPUBufferUsage.STORAGE,
+      GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       data
     )
   }
@@ -250,6 +250,15 @@ export default class WebGPUTest extends React.Component{
       uniform_data.buffer,
       uniform_data.byteOffset,
       uniform_data.byteLength
+    );
+
+    const out_initial_data = new Uint8Array(this.ping_pong_buffer_size);
+    this.device.queue.writeBuffer(
+      this.ping_pong_buffers.out,
+      0,
+      out_initial_data.buffer,
+      out_initial_data.byteOffset,
+      out_initial_data.byteLength
     );
 
     const textureView = this.context.getCurrentTexture().createView();

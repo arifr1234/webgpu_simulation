@@ -18,10 +18,6 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
 
     var this : Cell = in_buffer[index];
 
-    out_buffer[index] = INACTIVE_CELL;
-
-    storageBarrier();
-
     if is_active(this)
     {
         var coord : vec2<u32> = vec2<u32>(index % uniforms.resolution.x, index / uniforms.resolution.x);
