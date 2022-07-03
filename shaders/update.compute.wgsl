@@ -2,10 +2,14 @@
 @binding(1) @group(0) var<storage, read> in_buffer : array<Cell>;
 @binding(2) @group(0) var<storage, read_write> out_buffer : array<Cell>;
 
-var<private> INACTIVE_CELL: Cell = Cell(vec2<f32>(-1., 0.), vec2<f32>(0., 0.));
+var<private> INACTIVE_CELL: Cell = Cell(vec2<f32>(0., 0.), vec2<f32>(0., 0.), 0);
 
 fn is_valid_coord(coord : vec2<f32>) -> bool {
     return 0 <= coord.x && coord.x < uniforms.f_resolution.x && 0 <= coord.y && coord.y < uniforms.f_resolution.y;
+}
+
+fn calc_region(pos : vec2<f32>) -> vec2<i32> {
+    return vec2<i32>(floor(pos / uniforms.f_resolution));
 }
 
 @compute @workgroup_size(64)
@@ -14,20 +18,33 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
 
     var this : Cell = in_buffer[index];
 
-    if(is_active(this))
+    out_buffer[index] = INACTIVE_CELL;
+
+    storageBarrier();
+
+    if is_active(this)
     {
         var coord : vec2<u32> = vec2<u32>(index % uniforms.resolution.x, index / uniforms.resolution.x);
 
-        var new_pos : vec2<f32> = this.pos + this.vel;
+        var new_cell : Cell = Cell(this.pos + this.vel, this.vel, 1);
+        var new_coord : vec2<u32> = vec2<u32>(new_cell.pos);
 
-        out_buffer[index] = INACTIVE_CELL;
-        if(is_valid_coord(new_pos))
-        {
-            out_buffer[calc_index(vec2<u32>(new_pos))] = Cell(new_pos, this.vel);
+        var region : vec2<i32> = calc_region(new_cell.pos);
+
+        if region.x != 0{
+            new_cell.vel.x *= -1.;
+            new_coord = coord;
         }
-    }
-    else
-    {
-        out_buffer[index] = INACTIVE_CELL;
+
+        if region.y != 0 {
+            new_cell.vel.y *= -1.;
+            new_coord = coord;
+        }
+
+        if is_active(in_buffer[calc_index(new_coord)]) {
+            new_coord = coord;
+        }
+
+        out_buffer[calc_index(new_coord)] = new_cell;
     }
 }

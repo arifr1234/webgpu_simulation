@@ -6,6 +6,7 @@ struct Uniforms {
 struct Cell {
   pos : vec2<f32>,
   vel : vec2<f32>,
+  mode : u32,
 }
 
 fn calc_index(coord : vec2<u32>) -> u32 {
@@ -13,5 +14,5 @@ fn calc_index(coord : vec2<u32>) -> u32 {
 }
 
 fn is_active(cell : Cell) -> bool {
-    return cell.pos.x > 0.;
+    return cell.mode == 1;
 }

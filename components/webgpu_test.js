@@ -39,7 +39,8 @@ export default class WebGPUTest extends React.Component{
       this.pixel_num = this.canvas_size[0] * this.canvas_size[1];
       this.cell_byte_size = (
         (2) * 4 +  // pos
-        (2) * 4    // vel
+        (2) * 4 +  // vel
+        (1 + 1) * 4    // mode
       );
       this.ping_pong_buffer_size = this.pixel_num * this.cell_byte_size;
 
@@ -49,24 +50,25 @@ export default class WebGPUTest extends React.Component{
 
       const initial = new DataView(new ArrayBuffer(this.ping_pong_buffer_size));
 
-      const cells = [];
+      const particles = [];
 
       for(var i=0; i < 10; i++){
-        cells.push({
+        particles.push({
           pos: this.canvas_size.map(x => (1 - Math.random()) * x), 
           vel: [Math.random(), Math.random()].map(x => (2 * x - 1) / 10)
         });
       }
       
-      cells.forEach((cell, i) => {
+      particles.forEach((particle, i) => {
         const set_float32 = (offset, value) => {
           initial.setFloat32(i * this.cell_byte_size + offset * 4, value, true);
         };
         
-        set_float32(0, cell.pos[0]);
-        set_float32(1, cell.pos[1]);
-        set_float32(2, cell.vel[0]);
-        set_float32(3, cell.vel[1]);
+        set_float32(0, particle.pos[0]);
+        set_float32(1, particle.pos[1]);
+        set_float32(2, particle.vel[0]);
+        set_float32(3, particle.vel[1]);
+        initial.setUint32(i * this.cell_byte_size + 4 * 4, 1, true);
       });
       
 
