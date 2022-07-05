@@ -14,5 +14,5 @@ fn calc_index(coord : vec2<u32>) -> u32 {
 }
 
 fn is_active(cell : Cell) -> bool {
-    return cell.mode == 1;
+    return cell.mode != 0;
 }
