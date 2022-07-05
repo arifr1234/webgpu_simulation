@@ -37,10 +37,12 @@ fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
             new_coord = coord;
         }
 
-        if is_active(in_buffer[calc_index(new_coord)]) {
-            new_coord = coord;
+        var new_index : u32 = calc_index(new_coord);
+
+        if is_active(in_buffer[new_index]) {
+            new_index = index;
         }
 
-        out_buffer[calc_index(new_coord)] = new_cell;
+        out_buffer[new_index] = new_cell;
     }
 }
