@@ -3,6 +3,7 @@ import triangleVertWGSL from '../shaders/triangle.vert.wgsl';
 import fragWGSL from '../shaders/frag_shader.frag.wgsl';
 import updateComputeWGSL from '../shaders/update.compute.wgsl';
 import commonWGSL from '../shaders/common.wgsl';
+import * as type_utils from './utils/type_utils'
 
 export default class WebGPUTest extends React.Component{
   constructor(props) {
@@ -20,6 +21,8 @@ export default class WebGPUTest extends React.Component{
   componentDidMount(){
     this.load_web_gpu()
     .then(() => {
+      this.generate_code();
+
       this.context = this.canvas_ref.current.getContext('webgpu');
       this.presentationFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -37,11 +40,6 @@ export default class WebGPUTest extends React.Component{
       ];
 
       this.pixel_num = this.canvas_size[0] * this.canvas_size[1];
-      this.cell_byte_size = (
-        (2) * 4 +  // pos
-        (2) * 4 +  // vel
-        (1 + 1) * 4    // mode
-      );
       this.ping_pong_buffer_size = this.pixel_num * this.cell_byte_size;
 
       this.bind_group_layout = this.create_bind_group_layout();
@@ -81,6 +79,138 @@ export default class WebGPUTest extends React.Component{
 
       requestAnimationFrame(this.frame.bind(this));
     });
+  }
+
+  generate_code(){
+    const structs = [
+      type_utils.struct("Particle", [
+        ["pos", type_utils.vec2(type_utils.F32)],
+        ["vel", type_utils.vec2(type_utils.F32)],
+      ]),
+      type_utils.struct("BodyCell", [
+        ["a", type_utils.U32],
+        ["b", type_utils.U32],
+        ["c", type_utils.U32],
+      ]),
+    ];
+    const MODES = {"Particle": 1, "BodyCell": 2};
+
+    const modes_wgsl = Object.entries(MODES).map(mode => `var<private> ${mode[0].toUpperCase()} : u32 = ${mode[1]};\n`).join("");
+    console.log(modes_wgsl);
+
+    const max_struct_size = Math.max(...structs.map(struct => struct.size));
+    const ELEMENT_TYPE = type_utils.U32;
+    const total_elements_num = Math.ceil(type_utils.round_up(Math.max(ELEMENT_TYPE.size, 4), max_struct_size) / ELEMENT_TYPE.size);
+    const CELL_STRUCT_NAME = "Cell";
+
+    var cell_struct_elements = [];
+
+    cell_struct_elements = cell_struct_elements.concat(
+      Array(Math.floor(total_elements_num / 4)).fill().map((x, i) => {
+        return [`d_${i}`, type_utils.vec4(ELEMENT_TYPE)];
+      })
+    );
+
+    if(total_elements_num % 4 != 0)
+      cell_struct_elements = cell_struct_elements.concat([
+        [`d_${Math.floor(total_elements_num / 4)}`, type_utils[`vec${total_elements_num % 4}`](ELEMENT_TYPE)],
+      ]);
+
+    cell_struct_elements = cell_struct_elements.concat([
+      ["mode", type_utils.U32],
+    ]);
+
+    const cell_struct = type_utils.struct(CELL_STRUCT_NAME, cell_struct_elements, false, true);
+    this.cell_byte_size = cell_struct.size;
+
+    const structs_wgsl = structs.concat(cell_struct).map(struct => struct.definition).join("\n");
+
+    console.log(structs_wgsl);
+
+    var from_cell_bitcast_wgsl = structs.map(struct => {
+      var index_offset = 0;
+      var conversions = [];
+
+      for (const [name, type] of struct.elements) {
+        console.assert(type.size % ELEMENT_TYPE.size == 0, `Cant represent type "${type.str}" of size ${type.size}, with an array of "${ELEMENT_TYPE.str}" of size ${ELEMENT_TYPE.size}.`);
+
+        const elements_num = Math.floor(type.size / ELEMENT_TYPE.size);  // floor is for casting only.
+        
+        console.assert(elements_num <= 4, `Types with size more then 4 times the size of "${ELEMENT_TYPE.str}" are not supported yet.`)  // TODO: implement both ways.
+        var from = `cell.d_${Math.floor(index_offset / 4)}`;
+
+        if(!(Math.floor(index_offset / 4) == Math.floor(total_elements_num / 4) && total_elements_num % 4 == 1))
+          from = from + `.${type_utils.swizzle(index_offset % 4, index_offset % 4 + elements_num)}`;
+
+        conversions.push(`bitcast<${type.str}>(${from})`);
+
+        index_offset += elements_num;
+      }
+
+      var code = `${struct.str}(${conversions.join(", ")});`;
+      return `fn get_as_${struct.str}(cell : ${CELL_STRUCT_NAME}) -> ${struct.str} {\n  return ${code}\n}\n`
+    }).join("\n");
+
+    console.log(from_cell_bitcast_wgsl);
+
+    var to_cell_bitcast_wgsl = structs.map(struct => {
+      var struct_element_index = 0;
+
+      var conversions = [];
+
+      const cell_struct_element_num = Math.ceil(total_elements_num / 4);
+
+      for (let i = 0; i < cell_struct_element_num; i++) {
+        var conversion = [];
+        var inner_index = 0;
+
+        var max_inner_index = 4;
+        if(i == cell_struct_element_num - 1)
+          max_inner_index = (total_elements_num + 3) % 4 + 1;
+
+        while(inner_index < max_inner_index)
+        {
+          if(struct_element_index < struct.elements.length)
+          {
+            const [name, type] = struct.elements[struct_element_index];
+
+            const elements_num = Math.floor(type.size / ELEMENT_TYPE.size);
+            const cast_to = type_utils[`vec${elements_num}`](ELEMENT_TYPE);
+
+            conversion.push(`bitcast<${cast_to.str}>(cell.${name})`);
+
+            inner_index += elements_num;
+            struct_element_index += 1;
+          }
+          else
+          {
+            const missing_elements = max_inner_index - inner_index;
+
+            if (missing_elements == 1)
+              conversion.push(`${ELEMENT_TYPE.str}()`);
+            else
+              conversion.push(`vec${missing_elements}<${ELEMENT_TYPE.str}>()`);
+            
+            inner_index += missing_elements;
+          }
+        }
+
+        conversion = conversion.join(", ");
+        if(max_inner_index != 1)
+          conversion = `vec${max_inner_index}<${ELEMENT_TYPE.str}>(${conversion})`;
+
+        conversions.push(conversion);
+      }
+
+      var code = `${CELL_STRUCT_NAME}(${conversions.join(", ")}, ${MODES[struct.str]});`;
+      return `fn ${struct.str}_as_${CELL_STRUCT_NAME}(cell : ${struct.str}) -> ${CELL_STRUCT_NAME} {\n  return ${code}\n}\n`
+    }).join("\n");
+
+    console.log(to_cell_bitcast_wgsl);
+
+    const common_wgsl = [modes_wgsl, structs_wgsl, from_cell_bitcast_wgsl, to_cell_bitcast_wgsl, commonWGSL].join("\n\n");
+    updateComputeWGSL += common_wgsl;
+    fragWGSL += common_wgsl;
   }
 
   load_web_gpu(){
@@ -126,7 +256,7 @@ export default class WebGPUTest extends React.Component{
       }),
       compute: {
         module: this.device.createShaderModule({
-          code: commonWGSL + updateComputeWGSL,
+          code: updateComputeWGSL,
         }),
         entryPoint: 'main',
       },
@@ -210,7 +340,7 @@ export default class WebGPUTest extends React.Component{
       },
       fragment: {
         module: this.device.createShaderModule({
-          code: commonWGSL + fragWGSL,
+          code: fragWGSL,
         }),
         entryPoint: 'main',
         targets: [
